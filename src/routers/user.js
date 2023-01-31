@@ -2,6 +2,7 @@ const express = require("express");
 const router = new express.Router();
 const User = require("../models/user");
 const auth = require("../middleware/auth");
+const user = require("../models/user");
 
 router.get("/test", (req, res) => {
   res.send("Sample File");
@@ -52,6 +53,35 @@ router.post("/users/login", async (req, res) => {
     res.status(400).json(e);
   }
 });
+
+router.post("/users/logout", auth, async (req, res) => {
+  try {
+    req.user.tokens = req.user.tokens.filter((token) => {
+      return token.token !== req.token;
+    });
+
+    await req.user.save();
+
+    res.status(200).json({ error: "Successfully logged out" });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json(error);
+  }
+});
+
+//Logout From All Devices
+router.post("/users/logoutAll", auth, async (req, res) => {
+  try {
+    req.user.tokens = [];
+    await req.user.save();
+
+    res.status(200).json({ error: "Successfully logged out" });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json(error);
+  }
+});
+
 //Get All users
 router.get("/users/me", auth, async (req, res) => {
   try {
@@ -74,22 +104,26 @@ router.get("/users/:id", async (req, res) => {
   }
 });
 
-router.delete("/users/:id", async (req, res) => {
+router.delete("/users/me", auth, async (req, res) => {
   try {
-    const user = await User.findByIdAndDelete(req.params.id, req.body);
-    if (!user) {
-      res.status(404);
-    }
-    res.status(200).json(user);
+    // const user = await User.findByIdAndDelete(req.user._id);
+    // if (!user) {
+    //   res.status(404);
+    // }
+
+    //We can still remove it by using .remove() method
+
+    await req.user.remove();
+    res.status(200).json(req.user);
   } catch (error) {
     res.status(500).json(error);
   }
 });
 
-router.patch("/users/:id", async (req, res) => {
+router.patch("/users/me", auth, async (req, res) => {
   try {
     const updates = Object.keys(req.body);
-    const user = await User.findById(req.params.id);
+    const user = await User.findById(req.user._id);
     updates.forEach((update) => (user[update] = req.body[update]));
 
     await user.save();

@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const Task = require("../models/task");
 const userSchema = new mongoose.Schema({
   name: {
     type: String,
@@ -58,6 +59,21 @@ const userSchema = new mongoose.Schema({
   ],
 });
 
+//primary and foreign key relationships setup
+
+userSchema.virtual("userTasks", {
+  ref: "Task",
+  localField: "_id",
+  foreignField: "owner",
+});
+
+//delete the user tasks when user is removed
+userSchema.pre("remove", async function (next) {
+  const user = this;
+  await Task.deleteMany({ owner: user._id });
+  next();
+});
+
 userSchema.pre("save", async function (next) {
   const user = this;
   console.log("just before");
@@ -67,6 +83,13 @@ userSchema.pre("save", async function (next) {
   next();
 });
 
+userSchema.methods.toJSON = function () {
+  const user = this;
+  const userObject = user.toObject();
+  delete userObject.password;
+  delete userObject.tokens;
+  return userObject;
+};
 //Compare password in database
 userSchema.methods.comparePassword = async function (email, enterPassword) {
   const user = await this.model("Users").findOne({ email });
