@@ -2,62 +2,67 @@ const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const Task = require("../models/task");
-const userSchema = new mongoose.Schema({
-  name: {
-    type: String,
-    trim: true,
-  },
-  email: {
-    type: String,
-    trim: true,
-    validate: {
-      validator: async function (email) {
-        const user = await this.constructor.findOne({ email });
-        if (user) {
-          if (this.id === user.id) {
-            return true;
+const userSchema = new mongoose.Schema(
+  {
+    name: {
+      type: String,
+      trim: true,
+    },
+    email: {
+      type: String,
+      trim: true,
+      validate: {
+        validator: async function (email) {
+          const user = await this.constructor.findOne({ email });
+          if (user) {
+            if (this.id === user.id) {
+              return true;
+            }
+            return false;
           }
-          return false;
-        }
-        return true;
+          return true;
+        },
+        message: (props) => "The specified email address is already in use.",
       },
-      message: (props) => "The specified email address is already in use.",
+      required: [true, "User email required"],
     },
-    required: [true, "User email required"],
+    password: {
+      type: String,
+      trim: true,
+      minLength: 6,
+      required: true,
+      validate: {
+        validator(value) {
+          if (value.includes("password")) {
+            throw new Error("A password cannot have password string");
+          }
+        },
+      },
+    },
+    age: {
+      type: String,
+      trim: true,
+      validate: {
+        validator: (v) => {
+          if (isNaN(v)) {
+            throw new Error("Please enter only number");
+          }
+        },
+      },
+    },
+    tokens: [
+      {
+        token: {
+          type: String,
+          required: true,
+        },
+      },
+    ],
   },
-  password: {
-    type: String,
-    trim: true,
-    minLength: 6,
-    required: true,
-    validate: {
-      validator(value) {
-        if (value.includes("password")) {
-          throw new Error("A password cannot have password string");
-        }
-      },
-    },
-  },
-  age: {
-    type: String,
-    trim: true,
-    validate: {
-      validator: (v) => {
-        if (isNaN(v)) {
-          throw new Error("Please enter only number");
-        }
-      },
-    },
-  },
-  tokens: [
-    {
-      token: {
-        type: String,
-        required: true,
-      },
-    },
-  ],
-});
+  {
+    timestamps: true,
+  }
+);
 
 //primary and foreign key relationships setup
 
